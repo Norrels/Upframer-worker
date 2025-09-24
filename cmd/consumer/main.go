@@ -14,7 +14,7 @@ func init() {
 
 func main() {
 	defer rabbit.RabbitMQClient.CloseConnection()
-	queueName := "video-processing"
+	queueName := "job-creation"
 
 	msgs, err := rabbit.RabbitMQClient.ConsumeRabbitMQQueue(queueName)
 

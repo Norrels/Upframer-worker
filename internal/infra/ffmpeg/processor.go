@@ -1,7 +1,6 @@
 package ffmpeg
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"upframer-worker/internal/domain/entities"
@@ -20,10 +19,13 @@ func (p *FFmpegProcessor) ProcessVideo(job *entities.VideoJob) (*entities.Proces
 
 	if err != nil {
 		return &entities.ProcessingResult{
-			Success: false,
-			Error:   fmt.Errorf("error creating folder: %v", err),
+			Status: "failed",
+			JobId:  job.JobId,
 		}, err
 	}
+
+	// TODO
+	// Logar isso Error:  fmt.Errorf("error creating folder: %v", err),
 
 	outputName := outputDir + "/frame_%04d.jpg"
 
@@ -38,14 +40,14 @@ func (p *FFmpegProcessor) ProcessVideo(job *entities.VideoJob) (*entities.Proces
 
 	if err != nil {
 		return &entities.ProcessingResult{
-			Success: true,
-			Error:   fmt.Errorf("error extracting frames: %v", err),
+			Status:     "completed",
+			JobId:      job.JobId,
+			OutputPath: outputDir,
 		}, nil
 	}
 
 	return &entities.ProcessingResult{
-		Success:    true,
-		Error:      nil,
-		OutputPath: outputDir,
+		Status: "failed",
+		JobId:  job.JobId,
 	}, nil
 }

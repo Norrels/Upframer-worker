@@ -1,8 +1,7 @@
 package entities
 
 type ProcessingResult struct {
-	Success  bool
-	Error    error
-	ErrorMsg string
+	Status     string
 	OutputPath string
+	JobId      string
 }

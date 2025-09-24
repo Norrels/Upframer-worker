@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 	"upframer-worker/internal/domain/entities"
 
 	"github.com/rabbitmq/amqp091-go"
@@ -28,10 +27,9 @@ func (p *RabbitPublisher) Publish(queueName string, result *entities.ProcessingR
 	}
 
 	notification := map[string]interface{}{
-		"output_path": result.OutputPath,
-		"success":     result.Success,
-		"error_msg":   result.ErrorMsg,
-		"timestamp":   time.Now().Unix(),
+		"outputPath": result.OutputPath,
+		"status":     result.Status,
+		"jobId":      result.JobId,
 	}
 
 	messageJSON, err := json.Marshal(notification)
