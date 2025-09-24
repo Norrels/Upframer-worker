@@ -1,4 +1,4 @@
-name: Build and Code Analysis
+name: Build
 on:
   push:
     branches:
@@ -7,72 +7,24 @@ on:
     types: [opened, synchronize, reopened]
 jobs:
   sonarqube:
-    name: SonarQube Analysis
+    name: SonarQube
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
-
-      - name: Set up Go
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+        - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22.5'
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Download dependencies
-        run: go mod download
+          go-version: 1.22
 
       - name: Run tests with coverage
-        run: |
-          go test -v -covermode=atomic -coverprofile=coverage.out ./...
-          go tool cover -html=coverage.out -o coverage.html
-
-      - name: Generate test report
-        run: |
-          go test -v -json ./... > test-report.json || true
-
-      - name: Verify coverage files and Go sources
-        run: |
-          echo "Checking if coverage files exist..."
-          ls -la coverage.* || true
-          echo "Coverage file contents:"
-          head -10 coverage.out || true
-          echo "Go source files found:"
-          find cmd internal -name "*.go" -type f | head -20
-          echo "Go source files count:"
-          find cmd internal -name "*.go" -type f | wc -l
-          echo "Working directory contents:"
-          ls -la
+        run: go test ./... -coverprofile=coverage.out
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
-        with:
-          args: >
-            -Dsonar.language=go
-            -Dsonar.go.file.suffixes=.go
-            -Dsonar.sources=cmd,internal
-            -Dsonar.tests=cmd,internal
-            -Dsonar.test.inclusions=**/*_test.go
-            -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/*.pb.go
-            -Dsonar.go.coverage.reportPaths=coverage.out
-            -Dsonar.verbose=true
+          with:
+          projectBaseDir: .
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-
-      - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
-          path: |
-            coverage.out
-            coverage.html
-            test-report.json
+          SONAR_HOST_URL: "https://sonarcloud.io"
