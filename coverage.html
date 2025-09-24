@@ -1,0 +1,399 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>consumer: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">upframer-worker/cmd/consumer/main.go (0.0%)</option>
+				
+				<option value="file1">upframer-worker/internal/application/usecases/process_video.go (100.0%)</option>
+				
+				<option value="file2">upframer-worker/internal/infra/ffmpeg/processor.go (0.0%)</option>
+				
+				<option value="file3">upframer-worker/internal/infra/rabbit/consumer.go (0.0%)</option>
+				
+				<option value="file4">upframer-worker/internal/infra/rabbit/publisher.go (0.0%)</option>
+				
+				<option value="file5">upframer-worker/internal/infra/rabbit/rabbit.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "fmt"
+        "log"
+        "upframer-worker/internal/application/usecases"
+        "upframer-worker/internal/infra/ffmpeg"
+        "upframer-worker/internal/infra/rabbit"
+)
+
+func init() <span class="cov0" title="0">{
+        rabbit.NewRabbitMQConnection()
+}</span>
+
+func main() <span class="cov0" title="0">{
+        defer rabbit.RabbitMQClient.CloseConnection()
+        queueName := "job-creation"
+
+        msgs, err := rabbit.RabbitMQClient.ConsumeRabbitMQQueue(queueName)
+
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+
+        <span class="cov0" title="0">processor := ffmpeg.NewFFmpegProcessor()
+        publisher := rabbit.NewRabbitPublisher(rabbit.RabbitMQClient)
+        processVideoUseCase := usecases.NewProcessVideoUseCase(processor, publisher)
+
+        forever := make(chan bool)
+        go func() </span><span class="cov0" title="0">{
+                for msg := range msgs </span><span class="cov0" title="0">{
+                        fmt.Println("New message received, processing...")
+                        err := processVideoUseCase.Execute(msg.Body)
+
+                        if err != nil </span><span class="cov0" title="0">{
+                                msg.Nack(false, true)
+                                fmt.Printf("Error when processing: %v", err)
+                        }</span> else<span class="cov0" title="0"> {
+                                msg.Ack(false)
+                                fmt.Println("Successfully processed!")
+                        }</span>
+                }
+        }()
+
+        <span class="cov0" title="0">&lt;-forever</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package usecases
+
+import (
+        "encoding/json"
+        "fmt"
+        "upframer-worker/internal/domain/entities"
+        "upframer-worker/internal/domain/services"
+)
+
+type ProcessVideoUseCase struct {
+        processor services.VideoProcessor
+        publisher services.Publisher
+}
+
+func NewProcessVideoUseCase(processor services.VideoProcessor, publisher services.Publisher) *ProcessVideoUseCase <span class="cov10" title="7">{
+        return &amp;ProcessVideoUseCase{
+                processor: processor,
+                publisher: publisher,
+        }
+}</span>
+
+func (p *ProcessVideoUseCase) Execute(messageRawData []byte) error <span class="cov9" title="6">{
+
+        var job entities.VideoJob
+
+        if err := json.Unmarshal(messageRawData, &amp;job); err != nil </span><span class="cov1" title="1">{
+                fmt.Printf("error parsing message: %v\n", err)
+                return err
+        }</span>
+
+        <span class="cov8" title="5">result, err := p.processor.ProcessVideo(&amp;job)
+
+        if err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+
+        <span class="cov7" title="4">if err := p.publisher.Publish("video-processing-result", result); err != nil </span><span class="cov1" title="1">{
+                fmt.Printf("Error publishing result: %v\n", err)
+                return err
+        }</span>
+
+        <span class="cov6" title="3">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package ffmpeg
+
+import (
+        "os"
+        "os/exec"
+        "upframer-worker/internal/domain/entities"
+)
+
+type FFmpegProcessor struct{}
+
+func NewFFmpegProcessor() *FFmpegProcessor <span class="cov0" title="0">{
+        return &amp;FFmpegProcessor{}
+}</span>
+
+func (p *FFmpegProcessor) ProcessVideo(job *entities.VideoJob) (*entities.ProcessingResult, error) <span class="cov0" title="0">{
+        outputDir := "frames"
+
+        err := os.MkdirAll(outputDir, 0755)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return &amp;entities.ProcessingResult{
+                        Status: "failed",
+                        JobId:  job.JobId,
+                }, err
+        }</span>
+
+        // TODO
+        // Logar isso Error:  fmt.Errorf("error creating folder: %v", err),
+
+        <span class="cov0" title="0">outputName := outputDir + "/frame_%04d.jpg"
+
+        cmd := exec.Command("ffmpeg",
+                "-i", job.VideoPath,
+                "-vf", "fps=1",
+                "-y",
+                outputName,
+        )
+
+        _, err = cmd.CombinedOutput()
+
+        if err != nil </span><span class="cov0" title="0">{
+                return &amp;entities.ProcessingResult{
+                        Status:     "completed",
+                        JobId:      job.JobId,
+                        OutputPath: outputDir,
+                }, nil
+        }</span>
+
+        <span class="cov0" title="0">return &amp;entities.ProcessingResult{
+                Status: "failed",
+                JobId:  job.JobId,
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package rabbit
+
+import (
+        "fmt"
+
+        "github.com/rabbitmq/amqp091-go"
+)
+
+func (r *RabbitMQ) ConsumeRabbitMQQueue(queueName string) (&lt;-chan amqp091.Delivery, error) <span class="cov0" title="0">{
+
+        _, err := r.Channel.QueueDeclare(queueName, true, false, false, false, nil)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error declaring queue: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">err = r.Channel.Qos(1, 0, false)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error configuring QoS: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">msgs, err := r.Channel.Consume(queueName, "", false, false, false, false, nil)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error consuming the queue: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println("Waiting for messages...")
+        return msgs, err</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package rabbit
+
+import (
+        "encoding/json"
+        "fmt"
+        "log"
+        "upframer-worker/internal/domain/entities"
+
+        "github.com/rabbitmq/amqp091-go"
+)
+
+type RabbitPublisher struct {
+        client *RabbitMQ
+}
+
+func NewRabbitPublisher(client *RabbitMQ) *RabbitPublisher <span class="cov0" title="0">{
+        return &amp;RabbitPublisher{
+                client: client,
+        }
+}</span>
+
+func (p *RabbitPublisher) Publish(queueName string, result *entities.ProcessingResult) error <span class="cov0" title="0">{
+        _, err := p.client.Channel.QueueDeclare(queueName, true, false, false, false, nil)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("error declaring queue: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">notification := map[string]interface{}{
+                "outputPath": result.OutputPath,
+                "status":     result.Status,
+                "jobId":      result.JobId,
+        }
+
+        messageJSON, err := json.Marshal(notification)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("erro ao converter mensagem para JSON: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">err = p.client.Channel.Publish(
+                "",
+                queueName,
+                false,
+                false,
+                amqp091.Publishing{
+                        ContentType:  "application/json",
+                        Body:         messageJSON,
+                        DeliveryMode: amqp091.Persistent,
+                },
+        )
+
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Error while publ", err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package rabbit
+
+import (
+        "log"
+
+        "github.com/rabbitmq/amqp091-go"
+)
+
+var RabbitMQClient *RabbitMQ
+
+type RabbitMQ struct {
+        Conn    *amqp091.Connection
+        Channel *amqp091.Channel
+}
+
+func NewRabbitMQConnection() <span class="cov0" title="0">{
+        conn, err := amqp091.Dial("amqp://admin:admin@localhost:5672/")
+
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to connect to RabbitMQ: %s", err)
+        }</span>
+
+        <span class="cov0" title="0">ch, err := conn.Channel()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to open a RabbitMQ channel: %s", err)
+        }</span>
+
+        <span class="cov0" title="0">RabbitMQClient = &amp;RabbitMQ{
+                Conn:    conn,
+                Channel: ch,
+        }</span>
+}
+
+func (r *RabbitMQ) CloseConnection() <span class="cov0" title="0">{
+        r.Channel.Close()
+        r.Conn.Close()
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
