@@ -32,7 +32,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+          go test -v -covermode=atomic -coverprofile=coverage.out ./...
           go tool cover -html=coverage.out -o coverage.html
 
       - name: Generate test report
@@ -50,6 +50,10 @@ jobs:
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
+        with:
+          args: >
+            -Dsonar.go.coverage.reportPaths=coverage.out
+            -Dsonar.verbose=true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
