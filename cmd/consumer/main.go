@@ -6,6 +6,7 @@ import (
 	"upframer-worker/internal/application/usecases"
 	"upframer-worker/internal/infra/ffmpeg"
 	"upframer-worker/internal/infra/rabbit"
+	"upframer-worker/internal/infra/storage"
 )
 
 func init() {
@@ -22,7 +23,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	processor := ffmpeg.NewFFmpegProcessor()
+	localStorage := storage.NewLocalStorage("./output")
+
+	processor := ffmpeg.NewFFmpegProcessor(localStorage)
 	publisher := rabbit.NewRabbitPublisher(rabbit.RabbitMQClient)
 	processVideoUseCase := usecases.NewProcessVideoUseCase(processor, publisher)
 
