@@ -2,6 +2,7 @@ package rabbit
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/rabbitmq/amqp091-go"
 )
@@ -25,6 +26,6 @@ func (r *RabbitMQ) ConsumeRabbitMQQueue(queueName string) (<-chan amqp091.Delive
 		return nil, fmt.Errorf("error consuming the queue: %v", err)
 	}
 
-	fmt.Println("Waiting for messages...")
+	log.Println("Waiting for messages...")
 	return msgs, err
 }
