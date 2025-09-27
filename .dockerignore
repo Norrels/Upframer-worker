@@ -1,0 +1,67 @@
+# Ignorar arquivos desnecessários no build do Docker
+
+# Arquivos de desenvolvimento
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Arquivos de build e cache
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
+
+# Diretórios de output
+output/
+frames/
+results/
+temp_*
+
+# Arquivos de vídeo temporários
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Git
+.git/
+.gitignore
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS específicos
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentação
+README.md
+*.md
+
+# Logs
+*.log
+
+# Coverage
+*.cover
+coverage.txt
+coverage.html
