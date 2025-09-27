@@ -2,7 +2,7 @@ package usecases
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"upframer-worker/internal/domain/entities"
 	"upframer-worker/internal/domain/services"
 )
@@ -24,7 +24,7 @@ func (p *ProcessVideoUseCase) Execute(messageRawData []byte) error {
 	var job entities.VideoJob
 
 	if err := json.Unmarshal(messageRawData, &job); err != nil {
-		fmt.Printf("error parsing message: %v\n", err)
+		log.Printf("error parsing message: %v", err)
 		return err
 	}
 
@@ -35,7 +35,7 @@ func (p *ProcessVideoUseCase) Execute(messageRawData []byte) error {
 	}
 
 	if err := p.publisher.Publish("video-processing-result", result); err != nil {
-		fmt.Printf("Error publishing result: %v\n", err)
+		log.Printf("Error publishing result: %v", err)
 		return err
 	}
 

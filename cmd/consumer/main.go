@@ -1,11 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"os"
 	"upframer-worker/internal/application/usecases"
+	"upframer-worker/internal/domain/ports"
 	"upframer-worker/internal/infra/ffmpeg"
 	"upframer-worker/internal/infra/rabbit"
+	"upframer-worker/internal/infra/storage"
+
+	"github.com/joho/godotenv"
 )
 
 func init() {
@@ -22,22 +26,64 @@ func main() {
 		log.Fatal(err)
 	}
 
-	processor := ffmpeg.NewFFmpegProcessor()
+	err = godotenv.Load()
+
+	if err != nil {
+		log.Fatal("Error loading .env file", "error", err)
+	}
+
+	bucket := os.Getenv("AWS_BUCKET")
+	region := os.Getenv("AWS_REGION")
+	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
+	environment := os.Getenv("ENVIRONMENT")
+
+	var storageAdapter ports.Storage
+
+	if environment == "production" {
+		if bucket == "" || region == "" || accessKey == "" || secretKey == "" {
+			log.Fatal("FATAL: S3 credentials are required in production environment. Set AWS_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY")
+		}
+
+		s3Storage, err := storage.NewS3Storage(bucket, region, accessKey, secretKey, sessionToken)
+		if err != nil {
+			log.Fatalf("FATAL: Failed to initialize S3 storage in production: %v", err)
+		}
+		storageAdapter = s3Storage
+		log.Println("Using S3 storage (production mode)")
+	} else {
+		if bucket != "" && region != "" && accessKey != "" && secretKey != "" {
+			s3Storage, err := storage.NewS3Storage(bucket, region, accessKey, secretKey, sessionToken)
+			if err != nil {
+				log.Printf("Failed to initialize S3 storage: %v. Using local storage as fallback.", err)
+				storageAdapter = storage.NewLocalStorage("./output")
+			} else {
+				storageAdapter = s3Storage
+				log.Println("Using S3 storage (development mode)")
+			}
+		} else {
+			storageAdapter = storage.NewLocalStorage("./output")
+			log.Println("Using local storage (development mode - S3 credentials not provided)")
+		}
+	}
+
+	processor := ffmpeg.NewFFmpegProcessor(storageAdapter)
 	publisher := rabbit.NewRabbitPublisher(rabbit.RabbitMQClient)
 	processVideoUseCase := usecases.NewProcessVideoUseCase(processor, publisher)
 
 	forever := make(chan bool)
 	go func() {
 		for msg := range msgs {
-			fmt.Println("New message received, processing...")
+			log.Println("New message received, processing...")
 			err := processVideoUseCase.Execute(msg.Body)
 
 			if err != nil {
 				msg.Nack(false, true)
-				fmt.Printf("Error when processing: %v", err)
+				log.Printf("Error when processing: %v", err)
 			} else {
 				msg.Ack(false)
-				fmt.Println("Successfully processed!")
+				log.Println("Successfully processed!")
 			}
 		}
 	}()

@@ -1,2 +1,4 @@
 /frames
 coverage.html
+/output
+.env

@@ -74,7 +74,7 @@ func TestProcessVideoUseCase_Execute_InvalidJSON(t *testing.T) {
 	publisher := &MockPublisher{}
 	useCase := NewProcessVideoUseCase(processor, publisher)
 
-	invalidJSON := []byte(`{"invalid": json}`)
+	invalidJSON := []byte(`{"invalid json}`)
 
 	err := useCase.Execute(invalidJSON)
 	if err == nil {
