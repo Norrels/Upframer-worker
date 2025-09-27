@@ -13,8 +13,9 @@ COPY go.mod go.sum ./
 # Download das dependências
 RUN go mod download && go mod verify
 
-# Copiar código fonte
-COPY . .
+# Copiar apenas arquivos necessários para o build
+COPY cmd/ cmd/
+COPY internal/ internal/
 
 # Build da aplicação com otimizações para produção
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
