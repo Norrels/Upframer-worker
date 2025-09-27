@@ -24,7 +24,7 @@ func (p *ProcessVideoUseCase) Execute(messageRawData []byte) error {
 	var job entities.VideoJob
 
 	if err := json.Unmarshal(messageRawData, &job); err != nil {
-		log.Fatal("error parsing message: ", err)
+		log.Printf("error parsing message: %v", err)
 		return err
 	}
 
@@ -35,7 +35,7 @@ func (p *ProcessVideoUseCase) Execute(messageRawData []byte) error {
 	}
 
 	if err := p.publisher.Publish("video-processing-result", result); err != nil {
-		log.Fatal("Error publishing result: ", err)
+		log.Printf("Error publishing result: %v", err)
 		return err
 	}
 
