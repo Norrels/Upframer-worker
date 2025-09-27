@@ -17,14 +17,14 @@ func TestVideoJob_JSONMarshal(t *testing.T) {
 		t.Fatalf("Failed to marshal VideoJob: %v", err)
 	}
 
-	expected := `{"videoUrl":"test-video.mp4","outputPath":"/path/to/output","jobId":"job-123"}`
+	expected := `{"videoName":"test-video.mp4","VideoPath":"/path/to/output","jobId":"job-123"}`
 	if string(jsonData) != expected {
 		t.Errorf("Expected JSON %s, got %s", expected, string(jsonData))
 	}
 }
 
 func TestVideoJob_JSONUnmarshal(t *testing.T) {
-	jsonData := `{"videoUrl":"test-video.mp4","outputPath":"/path/to/output","jobId":"job-123"}`
+	jsonData := `{"videoName":"test-video.mp4","VideoPath":"/path/to/output","jobId":"job-123"}`
 
 	var job VideoJob
 	err := json.Unmarshal([]byte(jsonData), &job)
