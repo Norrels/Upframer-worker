@@ -40,13 +40,22 @@ func NewS3Storage(bucket, region, accessKey, secretKey, sessionToken string) (*S
 }
 
 func (s *S3Storage) StoreZip(sourceDir, zipFileName string) (*ports.StorageResult, error) {
-	tempZipPath := filepath.Join(os.TempDir(), zipFileName)
+	tempDir, err := os.MkdirTemp("", "upframer-secure-*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create secure temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
 
-	err := s.zipAdapter.CreateZipFile(sourceDir, tempZipPath)
+	if err := os.Chmod(tempDir, 0700); err != nil {
+		return nil, fmt.Errorf("failed to set secure permissions: %v", err)
+	}
+
+	tempZipPath := filepath.Join(tempDir, zipFileName)
+
+	err = s.zipAdapter.CreateZipFile(sourceDir, tempZipPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create zip file: %v", err)
 	}
-	defer os.Remove(tempZipPath)
 
 	uploader := manager.NewUploader(s.client)
 
