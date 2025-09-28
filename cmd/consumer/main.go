@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"upframer-worker/internal/application/usecases"
 	"upframer-worker/internal/domain/ports"
@@ -71,6 +72,22 @@ func main() {
 	processor := ffmpeg.NewFFmpegProcessor(storageAdapter)
 	publisher := rabbit.NewRabbitPublisher(rabbit.RabbitMQClient)
 	processVideoUseCase := usecases.NewProcessVideoUseCase(processor, publisher)
+
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	go func() {
+		port := os.Getenv("HEALTH_CHECK_PORT")
+		if port == "" {
+			port = "3334"
+		}
+		log.Printf("Health check server starting on port %s", port)
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
+			log.Printf("Health check server error: %v", err)
+		}
+	}()
 
 	forever := make(chan bool)
 	go func() {
