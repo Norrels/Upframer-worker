@@ -27,11 +27,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = godotenv.Load()
-
-	if err != nil {
-		log.Fatal("Error loading .env file", "error", err)
-	}
+	_ = godotenv.Load()
 
 	bucket := os.Getenv("AWS_BUCKET")
 	region := os.Getenv("AWS_REGION")
