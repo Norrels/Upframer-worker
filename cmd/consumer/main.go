@@ -5,12 +5,17 @@ import (
 	"net/http"
 	"os"
 	"upframer-worker/internal/application/usecases"
+	customerrors "upframer-worker/internal/domain/errors"
 	"upframer-worker/internal/domain/ports"
 	"upframer-worker/internal/infra/ffmpeg"
 	"upframer-worker/internal/infra/rabbit"
 	"upframer-worker/internal/infra/storage"
 
 	"github.com/joho/godotenv"
+)
+
+const (
+	maxRetries = 3
 )
 
 func init() {
@@ -20,6 +25,10 @@ func init() {
 func main() {
 	defer rabbit.RabbitMQClient.CloseConnection()
 	queueName := "job-creation"
+
+	if err := rabbit.RabbitMQClient.SetupDLQ(queueName); err != nil {
+		log.Fatalf("Failed to setup DLQ: %v", err)
+	}
 
 	msgs, err := rabbit.RabbitMQClient.ConsumeRabbitMQQueue(queueName)
 
@@ -89,11 +98,42 @@ func main() {
 	go func() {
 		for msg := range msgs {
 			log.Println("New message received, processing...")
+
+			retryCount := int32(0)
+			if msg.Headers != nil {
+				if count, ok := msg.Headers["x-retry-count"].(int32); ok {
+					retryCount = count
+				}
+			}
+
 			err := processVideoUseCase.Execute(msg.Body)
 
 			if err != nil {
-				msg.Nack(false, true)
 				log.Printf("Error when processing: %v", err)
+
+				if customerrors.IsPermanentError(err) {
+					log.Printf("Permanent error detected. Sending to DLQ without retry.")
+					if dlqErr := publisher.PublishToDLQ(queueName, msg.Body, err.Error(), retryCount); dlqErr != nil {
+						log.Printf("Failed to send to DLQ: %v", dlqErr)
+					}
+					msg.Nack(false, false)
+					continue
+				}
+
+				if retryCount >= maxRetries {
+					log.Printf("Max retries (%d) exceeded. Sending to DLQ.", maxRetries)
+					if dlqErr := publisher.PublishToDLQ(queueName, msg.Body, err.Error(), retryCount); dlqErr != nil {
+						log.Printf("Failed to send to DLQ: %v", dlqErr)
+					}
+					msg.Nack(false, false)
+					continue
+				}
+
+				log.Printf("Temporary error. Retry %d/%d", retryCount+1, maxRetries)
+				if requeueErr := rabbit.RabbitMQClient.RequeuWithRetryCount(queueName, msg.Body, retryCount); requeueErr != nil {
+					log.Printf("Failed to requeue message: %v", requeueErr)
+				}
+				msg.Nack(false, false)
 			} else {
 				msg.Ack(false)
 				log.Println("Successfully processed!")
