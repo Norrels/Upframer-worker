@@ -56,3 +56,34 @@ func (p *RabbitPublisher) Publish(queueName string, result *entities.ProcessingR
 
 	return nil
 }
+
+func (p *RabbitPublisher) PublishToDLQ(queueName string, originalMessage []byte, reason string, retryCount int32) error {
+	dlqExchangeName := queueName + ".dlq.exchange"
+	dlqRoutingKey := queueName + ".dlq"
+
+	headers := amqp091.Table{
+		"x-original-queue": queueName,
+		"x-failure-reason": reason,
+		"x-retry-count":    retryCount,
+	}
+
+	err := p.client.Channel.Publish(
+		dlqExchangeName,
+		dlqRoutingKey,
+		false,
+		false,
+		amqp091.Publishing{
+			ContentType:  "application/json",
+			Body:         originalMessage,
+			DeliveryMode: amqp091.Persistent,
+			Headers:      headers,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("error publishing to DLQ: %v", err)
+	}
+
+	log.Printf("Message sent to DLQ. Reason: %s, Retry count: %d", reason, retryCount)
+	return nil
+}

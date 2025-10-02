@@ -29,3 +29,72 @@ func (r *RabbitMQ) ConsumeRabbitMQQueue(queueName string) (<-chan amqp091.Delive
 	log.Println("Waiting for messages...")
 	return msgs, err
 }
+
+func (r *RabbitMQ) SetupDLQ(queueName string) error {
+	dlqName := queueName + ".dlq"
+	dlqExchangeName := queueName + ".dlq.exchange"
+
+	err := r.Channel.ExchangeDeclare(
+		dlqExchangeName,
+		"direct",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("error declaring DLQ exchange: %v", err)
+	}
+
+	_, err = r.Channel.QueueDeclare(
+		dlqName,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("error declaring DLQ: %v", err)
+	}
+
+	err = r.Channel.QueueBind(
+		dlqName,
+		dlqName,
+		dlqExchangeName,
+		false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("error binding DLQ: %v", err)
+	}
+
+	log.Printf("DLQ setup complete: %s", dlqName)
+	return nil
+}
+
+func (r *RabbitMQ) RequeuWithRetryCount(queueName string, message []byte, retryCount int32) error {
+	headers := amqp091.Table{
+		"x-retry-count": retryCount + 1,
+	}
+
+	err := r.Channel.Publish(
+		"",
+		queueName,
+		false,
+		false,
+		amqp091.Publishing{
+			ContentType:  "application/json",
+			Body:         message,
+			DeliveryMode: amqp091.Persistent,
+			Headers:      headers,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("error requeuing message: %v", err)
+	}
+
+	return nil
+}

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"upframer-worker/internal/domain/entities"
+	customerrors "upframer-worker/internal/domain/errors"
 	"upframer-worker/internal/domain/ports"
 )
 
@@ -33,10 +34,16 @@ func (p *FFmpegProcessor) ProcessVideo(job *entities.VideoJob) (*entities.Proces
 
 			err := p.storage.Download(s3Key, localVideoPath)
 			if err != nil {
+				if strings.Contains(err.Error(), "NoSuchKey") || strings.Contains(err.Error(), "not found") {
+					return &entities.ProcessingResult{
+						Status: "failed",
+						JobId:  job.JobId,
+					}, fmt.Errorf("%w: %v", customerrors.ErrFileNotFound, err)
+				}
 				return &entities.ProcessingResult{
 					Status: "failed",
 					JobId:  job.JobId,
-				}, fmt.Errorf("failed to download video from S3: %v", err)
+				}, fmt.Errorf("%w: %v", customerrors.ErrStorageUnavailable, err)
 			}
 			videoPath = localVideoPath
 			shouldCleanup = true
@@ -44,7 +51,7 @@ func (p *FFmpegProcessor) ProcessVideo(job *entities.VideoJob) (*entities.Proces
 			return &entities.ProcessingResult{
 				Status: "failed",
 				JobId:  job.JobId,
-			}, fmt.Errorf("invalid S3 URL format: %s", job.VideoPath)
+			}, fmt.Errorf("%w: %s", customerrors.ErrInvalidURLFormat, job.VideoPath)
 		}
 	} else {
 		videoPath = job.VideoPath
