@@ -3,14 +3,14 @@ package errors
 import "errors"
 
 var (
-	ErrFileNotFound        = errors.New("file not found in storage")
-	ErrInvalidURLFormat    = errors.New("invalid URL format")
+	ErrFileNotFound         = errors.New("file not found in storage")
+	ErrInvalidURLFormat     = errors.New("invalid URL format")
 	ErrInvalidMessageFormat = errors.New("invalid message format")
-	ErrInvalidJobData      = errors.New("invalid job data")
+	ErrInvalidJobData       = errors.New("invalid job data")
 
-	ErrStorageUnavailable  = errors.New("storage temporarily unavailable")
-	ErrNetworkTimeout      = errors.New("network timeout")
-	ErrFFmpegProcessing    = errors.New("ffmpeg processing error")
+	ErrStorageUnavailable = errors.New("storage temporarily unavailable")
+	ErrNetworkTimeout     = errors.New("network timeout")
+	ErrFFmpegProcessing   = errors.New("ffmpeg processing error")
 )
 
 func IsPermanentError(err error) bool {

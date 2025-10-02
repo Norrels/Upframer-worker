@@ -125,7 +125,7 @@ func main() {
 					if dlqErr := publisher.PublishToDLQ(queueName, msg.Body, err.Error(), retryCount); dlqErr != nil {
 						log.Printf("Failed to send to DLQ: %v", dlqErr)
 					}
-					msg.Nack(false, false) 
+					msg.Nack(false, false)
 					continue
 				}
 
